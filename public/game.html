@@ -1,0 +1,643 @@
+<!doctype html>
+<html>
+	<head>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+		<script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>
+		<link rel="stylesheet" type="text/css" href="/public/style.css">
+		<script>
+			var socket = io.connect();
+			var username;
+			var selected = [];
+			var focus = 'hand', pairFocus = 0, handFocus = 0, defendCard = null, defendId = null, trumpSuit = null, possibleDefend = [], haveSwapped = false, canAttack = true;
+
+			function showDefender(defender) {
+				if (username == defender) {
+					$('.defend-option').show();
+					$('.attack-option').hide();
+					showDialog('You are defending');
+				} else {
+					$('.defend-option').hide();
+					$('.attack-option').show();
+					$('.defender').removeClass('defender');
+					$('#' + defender).parent().removeClass('attacker');
+					$('#' + defender).parent().addClass('defender');
+				}
+			}
+
+			function showAttacker(attacker) {
+				if (username == attacker) {
+					showDialog('You are attacking');
+				} else {
+					$('.attacker').removeClass('attacker');
+					$('#' + attacker).parent().removeClass('defender');
+					$('#' + attacker).parent().addClass('attacker');
+				}
+			}
+
+			function replaceUser(toReplace, replacement) {
+				$('#' + toReplace).attr('id', replacement);
+				$('#num-' + toReplace).attr('id', 'num-' + replacement);
+				$('#name-' + toReplace).text(replacement);
+				$('#name-' + toReplace).attr('id', 'name-' + replacement);
+			}
+
+			function drawPlayerCard(cardName) {
+				$('#' + cardName).appendTo('#player-container');
+				$('#' + cardName).css('top', "500px");
+				$('#' + cardName).animate({top: "0px"}, 1000);
+			}
+
+			function discPlayerCard(cardName) {
+				if ($('#' + cardName).parent().attr('id') != 'cards-container')
+					$('#' + cardName).appendTo('#cards-container');
+			}
+
+			function addPlayerCard(name) {
+				if (username == name) {
+					var numCards = parseInt($('#num-cards').text(), 10);
+					$('#num-cards').text(numCards + 1);
+					return;
+				}
+				var number = $('#' + name).children().length;
+				if (number < 12) {
+					$('#' + name).append('<img class="cards" src="http://orig13.deviantart.net/149d/f/2014/330/1/1/yoshi_playing_card__by_galaxianartist-d87ps7n.jpg" />');
+					$('#' + name).children().last().css('z-index', number + 1);
+					$('#' + name).children().last().css('left', number * 15 + 'px');
+				} else {
+					$('#' + name).append('<div style="display:none"></div>');
+				}
+				$('#num-' + name).text(number + 1);
+			}
+
+			function removePlayerCard(name) {
+				if (username == name) {
+					var numCards = parseInt($('#num-cards').text(), 10);
+					$('#num-cards').text(numCards - 1);
+					return;
+				}
+				var number = parseInt($('#num-' + name).text());
+				$('#num-' + name).text(number - 1);
+				$('#' + name).children().last().remove();
+			}
+
+			function attackPair(attack, id) {
+				$('#incomplete-container').append('<div class="pair" id="pair' + id + '"></div>');
+				$('#' + attack).animate({left: "500px"}, 1000, function() {
+					$(this).appendTo('#pair' + id);
+					$(this).css('top', '-500px');
+					$(this).animate({top: "0px", left: "0px"}, 1000);
+				});
+			}
+
+			function defendPair(defend, pairId) {
+				$('#' + defend).animate({top: "500px"}, 1000, function() {
+					$(this).appendTo('#pair' + pairId);
+				  	$(this).css('top', '-500px');
+				  	$(this).css('left', '-75px');
+				  	$(this).animate({top: "-30px"}, 1000);
+				});
+			}
+
+			function initDefend() {
+				if (!$('.pair').length) {
+					showDialog('No cards to defend against');
+					return;
+				}
+				showDialog('Select pair to defend against (left, right arrows), then press enter', 'Backspace to cancel');
+				startSelection();
+				selectPair();
+			}
+
+			function chooseDefend() {
+				defendCard = pairFocus % $('.pair').length;
+				if (defendCard < 0)
+					defendCard += $('.pair').length;
+				defendId = $('.pair').eq(defendCard).children().first().attr('id');
+				showDialog('Select card to defend with (left, right arrows) then press enter', 'Backspace to cancel');
+				findDefend();
+				selectCard();
+			}
+
+			function findDefend() {
+				possibleDefend = [];
+				$('#player-container .cards').each(function(index) {
+					var cardName = $(this).attr('id').split('-');
+					var defendName = defendId.split('-');
+					var cardSuit = cardName[2], defendSuit = defendName[2];
+
+					if (cardSuit == trumpSuit && defendSuit != trumpSuit) {
+						$(this).addClass('defend-card');
+						possibleDefend.push(index);
+						return;
+					}
+
+					var cardRank = cardName[0], defendRank = defendName[0];
+
+					if (defendSuit == trumpSuit && cardSuit == trumpSuit) {
+						if (checkRank(defendRank, cardRank)) {
+							$(this).addClass('defend-card');
+							possibleDefend.push(index);
+						}
+
+						return;
+					}
+
+					if (defendSuit == cardSuit && checkRank(defendRank, cardRank)) {
+						$(this).addClass('defend-card');
+						possibleDefend.push(index);
+					}
+				});
+			}
+
+			function checkRank(rank1, rank2) {
+				var ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+				return ranks.indexOf(rank1) < ranks.indexOf(rank2);
+			}
+
+			function sendDefend() {
+				socket.emit('defend', $('.focus').eq(0).attr('id'), defendCard);
+				defendCard = null;
+				$('.defend-card').removeClass('defend-card');
+				clearDialog();
+			}
+
+			function initWin() {
+				showDialog('Waiting five seconds...')
+				showDumpTimer(4000);
+				setTimeout(function() {
+					socket.emit('win');
+				}, 5000);
+			}
+
+			function initSurrender() {
+				socket.emit('surrender');
+			}
+
+			function initPass() {
+				showDialog('Select card(s) to pass with, press up for each, then press enter to confirm');
+				defendCard = -1;
+				startSelection();
+				selectCard();
+			}
+
+			function sendPass() {
+				socket.emit('pass', getTempNames());
+				defendCard = null;
+				clearDialog();
+			}
+
+			function initAttack() {
+				showDialog('Select card(s) to attack with, press up for each, then press enter to confirm');
+				startSelection();
+				selectCard();
+			}
+
+			function sendAttack() {
+				if ($('#temp-container .cards').length == 0 || $('#timer').text() <= '1' || !canAttack)
+					return;
+				if ($('.pair').length == 0)
+					socket.emit('init attack', getTempNames());
+				else
+					socket.emit('attack', getTempNames()); // form check
+
+				// fix multiple attack bug
+				canAttack = false;
+				setTimeout(function() {
+					canAttack = true;
+				}, 2000)
+
+				confirmTempAttack();
+				clearDialog();
+			}
+
+			function initSwap() {
+				showDialog('Select card to swap for the trump');
+				haveSwapped = true;
+				startSelection();
+				selectCard();
+			}
+
+			function sendSwap() {
+				socket.emit('swap trump', $('.focus').attr('id'));
+				haveSwapped = false;
+				clearDialog();
+			}
+
+			function discardPairs(hasWon, playerName) {
+				var destination = '#cards-container';
+				if (!hasWon && username == playerName) {
+					destination = '#player-container';
+				}
+				
+				$('#pair-container .cards').animate({top: "-500px"}, 1000, function() {
+					if (!hasWon) {
+						addPlayerCard(playerName);
+					}
+					$(this).appendTo(destination);
+					$(this).css('top', '500px');
+					$(this).css('left', '0px');
+					$(this).animate({top: '0px'});
+				});
+
+				$('.pair').remove();
+			}
+
+			function drawCards(name, cardNames) {
+				if (username == name) {
+					for (var cardName of cardNames) {
+						addPlayerCard(username);
+						drawPlayerCard(cardName);
+					}
+				} else {
+					for (var cardName of cardNames) {
+						addPlayerCard(name);
+						discPlayerCard(cardName);
+					}
+				}
+			}
+
+			function tempAttack() {
+				$('.focus').animate({top: "500px"}, 1000, function() {
+					$(this).appendTo('#temp-cards');
+					$(this).css('left', '500px');
+					$(this).css('top', "20px");
+					$(this).animate({left: "0px"}, 1000, function() {
+				  		focusCard(0);
+					});
+				});
+			}
+
+			function tempWithdraw() {
+				$('#temp-container .cards').animate({left: "500px"}, 1000, function() {
+					$(this).css('top', "500px");
+					$(this).appendTo('#player-container');
+					$(this).css('left', '0px');
+					$(this).animate({top: "0px"}, 1000);
+				});
+				clearDialog();
+			}
+
+			function confirmTempAttack() {
+				$('.focus').removeClass('focus');
+				$('#temp-container .cards').each(function(index) {
+					index += $('.pair').length - index;
+					attackPair($(this).attr('id'), index);
+				});
+				clearDialog();
+			
+/*				$('.pair').each(function() {
+					if ($(this).children().length == 0)
+						$(this).remove();
+				});
+
+				$('.pair').each(function(index) {
+					if ($(this).attr('id').slice(4) != index)
+						$(this).attr('id', 'pair' + index);
+				});*/
+			}
+
+			function getTempNames() {
+				var tempNames = [];
+				$('#temp-container .cards').each(function() {
+					tempNames.push($(this).attr('id'));
+				});
+				return tempNames;
+			}
+
+			function checkWinGame() {
+				if ($('#player-container .cards').length == 0)
+					socket.emit('end game');
+			}
+
+			function selectPair() {
+				focus = 'pair';
+				focusCard(1);
+			}
+
+			function selectCard() {
+				focus = 'hand';
+				focusCard(1);
+			}
+
+			function startSelection() {
+				$('body').keydown(function(e) {
+					if ($('#message').is(":focus")) {
+						return;
+					}
+					var container = '';
+					if (e.which == 37) { // left
+						focusCard(-1);
+					}
+					if (e.which == 39) { // right
+						focusCard(1);
+					}
+					if (e.which == 38) { // up
+						if (focus == 'hand' && (defendCard == null || defendCard == -1)) {
+							tempAttack();
+							showDialog('Enter to Confirm', 'Backspace to Cancel');
+						}
+					}
+					if (e.which == 8) {
+						tempWithdraw();
+						defendCard = null;
+						haveSwapped = false;
+						$('.defend-card').removeClass('defend-card');
+						endSelection();
+					}
+					if (e.which == 13) {
+						if (haveSwapped)
+							sendSwap();
+						else if (focus == 'hand' && defendCard === null)
+							sendAttack();
+						else if (defendCard === null)
+							chooseDefend();
+						else if (defendCard == -1)
+							sendPass();
+						else
+							sendDefend();
+
+						checkWinGame();
+
+						if (defendCard === null)
+							endSelection();
+					}
+					
+					e.preventDefault();
+				});	
+			}
+
+			function endSelection() {
+				$('body').off();
+				$('.focus').removeClass('focus');
+			}
+
+			function focusCard(incrementer) {
+				var newFocus = 0, container;
+				$('.focus').removeClass('focus');
+				if (focus == 'hand') {
+					handFocus += incrementer;
+					container = '#player-container';
+					newFocus = handFocus % $(container).children().length;
+					var range = Math.floor($('#player-container').width() / 211);
+					$(container).children().eq(newFocus).addClass('focus');
+					$(container).children().each(function(index) {
+						if (newFocus <= range && index <= range || newFocus > range && (newFocus - range) <= index && index <= newFocus) {
+							$(this).show();
+						} else  {
+							$(this).hide();
+						}
+					});
+				} else {
+					pairFocus += incrementer;
+					container = '#incomplete-container';
+					newFocus = pairFocus % $(container).children().length;
+					var counter = 0;
+					while ($(container).children().eq(newFocus).children().length == 2 && counter < $('.pair').length) {
+						counter++;
+						pairFocus += incrementer;
+						newFocus = pairFocus % $(container).children().length;
+					}
+					$(container).children().eq(newFocus).children().addClass('focus');
+				}
+				if (incrementer == 0)
+					$('.focus').removeClass('focus');
+			}
+
+			function showDialog() {
+				clearDialog();
+				for (var mess of arguments)
+					$('#dialogMess').append('<span>' + mess + '</span>');
+			}
+
+			function clearDialog() {
+				$('#dialogMess').html('');
+			}
+
+			function setDeckCards(numCards) {
+				$('#deck-num-cards').text(numCards);
+			}
+
+			$(window).scroll(function(){
+				var leftVal = $(this).scrollLeft() + 255;
+				if (leftVal + $('#player-container').width() > $('#content').width())
+					leftVal = $('#content').width() - $('#player-container').width() + 255;
+				if (leftVal > 0) {
+				    $('#player-container').css({'left': leftVal});
+				} 
+
+				if ($(this).scrollLeft() > 25)
+					$('#sidebar').hide();
+				else
+					$('#sidebar').show();
+			});
+
+			function superWinAnimation(winner) {
+				// make something fun
+				if (username == winner)
+					showDialog('Winner winner, chicken dinner');
+				else
+					showDialog(winner + ' has won!!!!!! You lose!!!!');
+			}
+
+			function showDumpTimer(time) {
+				$('#timer').text(time / 1000);
+				$('#timer').show();
+				if (time <= 0) {
+					$('#timer').hide();
+					setTimeout(function() {
+						$('#timer').text(15);
+					}, 1000)
+					return;	
+				}
+				setTimeout(function() {
+					showDumpTimer(time - 1000);
+				}
+				, 1000);
+			}
+
+			socket.on('init game', function() {
+				$('#initial-container').hide();
+				$('#game-container').show();
+			});
+		</script>
+		<script>
+			socket.on('room list', function(rooms) {
+				console.log(rooms);
+				populateRooms(rooms);
+				if (rooms.length == 0) {
+					$('#rooms-container').append('<div style="text-align:center">No rooms available</div>');
+				}
+			});
+
+			function populateRooms(rooms) {
+				$('#rooms-container').children().each(function() {
+					if ($(this).attr('id') != 'categories')
+						$(this).remove();
+				});
+				for (var room of rooms) {
+					var roomInfo = room[1];
+					var numPlayers = roomInfo.users.length;
+					$('#rooms-container').append('<div class="room"><div class="name">' + room[0] + '</div><div class="players">' + numPlayers + ' / ' + roomInfo.players + '</div><div class="type">' + roomInfo.deck + '</div></div>');
+				}
+			}
+
+			function setupGame(create) {
+				if (!create) {
+					$('.create').hide();
+					$('#room-name').val($('.selected .name').eq(0).text());
+				}
+				$('#connect-container').hide();
+				$('#setup-container').show();
+			}
+
+			function setupDialog(option) {
+				if (typeof(option) !== 'undefined') {
+					$('#setup-form li').hide();
+					$('#' + option).show();
+				}
+			}
+
+			socket.on('username', function() {
+				setupDialog('name-field');
+			});
+
+			socket.on('setup game', function(option) {
+				setupDialog(option);
+			});
+
+			socket.emit('fetch games');
+		</script>
+	</head>
+	<body>
+		<div id="initial-container">
+			<div id="connect-container">
+				<div id="connect-header">Join or Create a game</div>
+				<div id="rooms-container">
+					<div id="categories"><div class="name">Name</div><div class="players">Players</div><div class="type">Type</div></div>
+				</div>
+				<div id="connect-footer">
+					<div class="button" style="margin-left: calc(50% - 150px)" onClick="setupGame(true)">Create Game</div>
+					<div class="button" onClick="setupGame(false)">Join Game</div>
+					<div class="button" onClick="socket.emit('fetch games')">Refresh</div>
+				</div>
+			</div>
+			<div id="setup-container" style="display: none">
+				<form action="" id="setup-form">
+					<h1 style="color: white; padding-bottom: 20px;">SETUP</h1>
+					<ul>
+						<li id="name-field"><span style="margin-right: 35px">NAME:      </span><input id="username" autocomplete="off"/></li>
+						<li id="room-field"><span style="margin-right: 32px">ROOM: </span><input id="room-name" autocomplete="off" /></li>
+	          			<li class="create"><span style="margin-right: 4px">PLAYERS:   </span><select id="num-players">
+	          					<option value="2">2</option>
+			                    <option value="3">3</option>
+			                    <option value="4">4</option>
+			                    <option value="5">5</option>
+			                    <option value="6">6</option>
+	                     </select></li>
+	          			<li class="create"><span style="margin-right: 28px">RULES:     </span><select id="rules-options">
+	          					<option value="House Rules">House Rules </option><a href="hRules.txt">-- help</a>
+			                    <option value="Russian Rules">Russian Rules </option><a href="rRules.txt">-- help</a>
+	                     </select></li>
+	          			<li class="create"><span style="margin-right: 38px">DECK:      </span><select id="deck-options">
+			                    <option value="Full">Full (52 cards)</option>
+			                    <option value="Quick">Quick (36 cards)</option>
+	                     </select></li>
+	          		</ul>
+	          		<div class="button" style="border: 3px solid white; width: 100px; padding: 10px; margin-left: calc(50% - 60px)" onClick="$('#setup-form').submit()">SUBMIT</div>
+	  			</form>
+			</div>
+		</div>
+		<div id="game-container" style="display:none">
+			<div id="sidebar">
+				<div id="chat-container">
+	        		Chat
+	        		<ul id="messages"></ul>
+	        		<form action="" id="chat-form">
+	          			<input id="message" autocomplete="off"/>
+	    			</form>
+				</div>
+				<div id="players-container"></div>
+			</div>
+			<div id="content">
+				<div id="cards-container" style="display: none">
+					<div class="cards clubs" id="A-of-Clubs"><span>A &#9827</span><ul><li>A</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="2-of-Clubs"><span>2 &#9827</span><ul><li>2</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="3-of-Clubs"><span>3 &#9827</span><ul><li>3</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="4-of-Clubs"><span>4 &#9827</span><ul><li>4</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="5-of-Clubs"><span>5 &#9827</span><ul><li>5</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="6-of-Clubs"><span>6 &#9827</span><ul><li>6</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="7-of-Clubs"><span>7 &#9827</span><ul><li>7</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="8-of-Clubs"><span>8 &#9827</span><ul><li>8</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="9-of-Clubs"><span>9 &#9827</span><ul><li>9</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="10-of-Clubs"><span>10 &#9827</span><ul><li>10</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="J-of-Clubs"><span>J &#9827</span><ul><li>J</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="Q-of-Clubs"><span>Q &#9827</span><ul><li>Q</li><li>&#9827</li></ul></div>
+					<div class="cards clubs" id="K-of-Clubs"><span>K &#9827</span><ul><li>K</li><li>&#9827</li></ul></div>
+					<div class="cards spades" id="A-of-Spades"><span>A &#9824</span><ul><li>A</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="2-of-Spades"><span>2 &#9824</span><ul><li>2</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="3-of-Spades"><span>3 &#9824</span><ul><li>3</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="4-of-Spades"><span>4 &#9824</span><ul><li>4</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="5-of-Spades"><span>5 &#9824</span><ul><li>5</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="6-of-Spades"><span>6 &#9824</span><ul><li>6</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="7-of-Spades"><span>7 &#9824</span><ul><li>7</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="8-of-Spades"><span>8 &#9824</span><ul><li>8</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="9-of-Spades"><span>9 &#9824</span><ul><li>9</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="10-of-Spades"><span>10 &#9824</span><ul><li>10</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="J-of-Spades"><span>J &#9824</span><ul><li>J</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="Q-of-Spades"><span>Q &#9824</span><ul><li>Q</li><li>&#9824</li></ul></div>
+					<div class="cards spades" id="K-of-Spades"><span>K &#9824</span><ul><li>K</li><li>&#9824</li></ul></div>
+					<div class="cards hearts" id="A-of-Hearts"><span>A &#9829</span><ul><li>A</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="2-of-Hearts"><span>2 &#9829</span><ul><li>2</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="3-of-Hearts"><span>3 &#9829</span><ul><li>3</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="4-of-Hearts"><span>4 &#9829</span><ul><li>4</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="5-of-Hearts"><span>5 &#9829</span><ul><li>5</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="6-of-Hearts"><span>6 &#9829</span><ul><li>6</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="7-of-Hearts"><span>7 &#9829</span><ul><li>7</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="8-of-Hearts"><span>8 &#9829</span><ul><li>8</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="9-of-Hearts"><span>9 &#9829</span><ul><li>9</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="10-of-Hearts"><span>10 &#9829</span><ul><li>10</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="J-of-Hearts"><span>J &#9829</span><ul><li>J</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="Q-of-Hearts"><span>Q &#9829</span><ul><li>Q</li><li>&#9829</li></ul></div>
+					<div class="cards hearts" id="K-of-Hearts"><span>K &#9829</span><ul><li>K</li><li>&#9829</li></ul></div>
+					<div class="cards diamonds" id="A-of-Diamonds"><span>A &#9830</span><ul><li>A</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="2-of-Diamonds"><span>2 &#9830</span><ul><li>2</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="3-of-Diamonds"><span>3 &#9830</span><ul><li>3</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="4-of-Diamonds"><span>4 &#9830</span><ul><li>4</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="5-of-Diamonds"><span>5 &#9830</span><ul><li>5</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="6-of-Diamonds"><span>6 &#9830</span><ul><li>6</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="7-of-Diamonds"><span>7 &#9830</span><ul><li>7</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="8-of-Diamonds"><span>8 &#9830</span><ul><li>8</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="9-of-Diamonds"><span>9 &#9830</span><ul><li>9</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="10-of-Diamonds"><span>10 &#9830</span><ul><li>10</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="J-of-Diamonds"><span>J &#9830</span><ul><li>J</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="Q-of-Diamonds"><span>Q &#9830</span><ul><li>Q</li><li>&#9830</li></ul></div>
+					<div class="cards diamonds" id="K-of-Diamonds"><span>K &#9830</span><ul><li>K</li><li>&#9830</li></ul></div>
+				</div>
+				<div id="deck-container">
+					<img class="cards" src="http://orig13.deviantart.net/149d/f/2014/330/1/1/yoshi_playing_card__by_galaxianartist-d87ps7n.jpg" />
+					<div class="tag" style="margin-left: -110px; margin-top:200px; width: 70px"><span id="deck-num-cards"></span> cards</div>
+				</div>
+				<div id="trump-container"></div>
+				<div id="pair-container">
+					<div id="complete-container"></div>
+					<div id="incomplete-container"></div>
+				</div>
+				<div id="temp-container"><div id="temp-cards"></div><div id="dialogMess"></div></div>
+				<div id="actions-container">
+					<ul id="actions">
+						<li class="tag" id="timer" style="display: none">15</li>
+						<li class="tag"><span id="num-cards">0</span> cards</li>
+						<li class="tag button defend-option" onClick="initDefend()">DEFEND</li>
+						<li class="tag button defend-option" onClick="initPass()">PASS</li>
+						<li class="tag button defend-option" onClick="initWin()">WIN</li>
+						<li class="tag button defend-option" onClick="initSurrender()">GIVE UP</li>
+						<li class="tag button attack-option" onClick="initAttack()">ATTACK</li>
+						<li class="tag button" onClick="initSwap()" id="swap">SWAP</li>
+					</ul>
+				</div>
+				<div id="player-container"></div>
+			</div>
+		</div>
+		<script src="/public/client.js"></script>
+	</body>
+</html>

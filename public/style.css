@@ -1,0 +1,490 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+/*container stuff*/
+body {
+	background: #36465d;
+	overflow: auto;
+}
+
+#wrapper {
+	width: 100%;
+}
+
+#cards-container {
+	float: right;
+	display: none;
+}
+
+#deck-container {
+	float: right;
+	margin: 5px;
+}
+
+#deck-container img {
+	width: 135px;
+	height: 180px;
+}
+
+#trump-container {
+	float: right;
+	margin-top: 5px;
+}
+
+#trump-container .cards {
+	width: 135px;
+	height: 180px;
+	font-size: 80px;
+}
+
+.trump {
+	width: 135px;
+	height: 180px;
+	font-size: 100px;
+}
+
+#trump-container span {
+	font-size: 23px;
+}
+
+#temp-container {
+	float: right;
+	width: 350px;
+	height: 175px;
+	background: #33FF99;
+	position: relative;
+	margin-top: -336px;
+	margin-bottom: -100px;
+	border: 5px solid gray;
+	border-radius: 5px;
+	text-align: center;
+}
+
+#temp-container .cards {
+	margin-left: 5px;
+	font-size: 45px;
+	top: 40px;
+}
+
+#temp-cards {
+	height: 135px;
+}
+
+#dialogMess {
+	height: 40px;
+	background-color: rgba(240, 255, 240,0.8);
+	color: #303030;
+	font-family: arial;
+}
+
+#dialogMess span {
+	margin-left: 10px;
+}
+
+#player-container {
+	width: 80%;
+	max-height: 220px;
+	margin-top: -115px;
+	position: absolute;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+#player-container .cards {
+	width: 150px;
+	height: 200px;
+	margin-left: 5px;
+	margin-top: 5px;
+	white-space: nowrap;
+	position: absolute;
+	display: inline-block;
+}
+
+#player-container .cards span {
+	font-size: 30px;
+}
+
+#actions-container {
+	float: right;
+	margin-top: -150px;
+}
+
+#pair-container {
+	height: 600px;
+	width: calc(100% - 255px - 170px);
+	min-width: 600px;
+}
+
+#incomplete-container {
+	margin-left: 40px;
+	height: 400px;
+}
+
+#complete-container {
+
+}
+
+.focus {
+	outline: 5px solid yellow;
+}
+
+.pair {
+	float: left;
+	width: 162px;
+	margin: 5px;
+	margin-top: 35px;
+	margin-left: -35px;
+	height: 130px;
+}
+
+.pair .cards {
+	font-size: 45px;
+}
+
+.pair .cards:nth-child(1) {
+	z-index: 2;
+}
+
+.pair .cards:nth-child(2) {
+	z-index: 1;
+	top: -30px;
+	left: -75px;
+}
+
+.button:hover {
+	cursor: pointer;
+}
+
+.error {
+	border: 1px solid red;
+}
+
+#actions-container ul {
+	list-style-type: none;
+}
+
+.tag {
+	float: left;
+	line-height: 30px;
+	text-align: center;
+	padding-left: 5px;
+	padding-right: 5px;
+	min-width: 70px;
+	height: 30px;
+	background-color: #529ecc;
+	color: white;
+	font-family: arial;
+	font-weight: bold;
+	border: 3px solid #F0FFF0;
+}
+
+#content {
+	width: calc(100% - 255px);
+	height: 670px;
+	min-width: 800px;
+	margin-left: 255px;
+	overflow: hidden;
+}
+
+#content .cards {
+	position: relative;
+}
+
+#sidebar {
+	width: 250px;
+	max-width: 250px;
+	height: 100%;
+	border-style: solid;
+	border-width: 0px;
+	border-top-right-radius: 5px;
+	border-bottom-right-radius: 5px;
+	margin-left: 5px;
+	position: fixed;
+}
+
+#players-container {
+	font-family: Arial;
+	text-align: center;
+	height: 350px;
+	overflow-y: visible;
+}
+
+#players-container .player:nth-child(even) {
+	background: black;
+	color: white;
+}
+
+#players-container .player:nth-child(odd) {
+	background: #F0FFF0;
+	color: black;
+}
+
+.defender {
+	outline: 2px solid #66FF66;
+}
+
+.attacker {
+	outline: 2px solid #900000;
+}
+
+.defend-card {
+	background-color: #CCFFFF !important;
+}
+
+.player {
+	max-width: 200px;
+	height: 90px;
+	font-size: 18px;
+	font-weight: bold;
+	line-height: 25px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	border-style: solid;
+	border-width: 1px;
+	border-radius: 5px;
+}
+
+.player-name {
+	width: 165px;
+	float: left;
+}
+
+.player-hand {
+	float: left;
+	width: 200px;
+	height: 50px;
+	max-height: 100px;
+	position: relative;
+	white-space: nowrap;
+	background: transparent;
+	padding-left: 5px;
+	margin-left: 5px;
+}
+
+.player-hand img{
+	width: 40px;
+	height: auto;
+	border-style: solid;
+	border-width: 1px;
+	border-radius: 3px;
+	position: absolute;
+}
+
+.player-hand:first-child {
+	width: 200px;
+}
+
+.player-hand .cards{
+	width: 40px;
+	height: auto
+}
+
+.num-cards {
+	float: right;
+	margin-right: 5px;
+}
+
+/*card stuff*/
+
+.cards {
+	width: 75px;
+	height: 100px;
+	text-align: right;
+	border: 3px solid black;
+	border-radius: 5px;
+	float: left;
+	background: white;
+	font-size: 90px;
+}
+
+.cards ul {
+	margin-right: 5px;
+	list-style-type: none;
+}
+
+.cards span {
+	margin-left: 5px;
+	float: left;
+	font-size: 10px;
+}
+
+.clubs {
+
+}
+
+.spades {
+
+}
+
+.hearts {
+	color: red;
+}
+
+.diamonds {
+	color: red;
+}
+
+/*chat stuff #4077a5*/
+
+#chat-container {
+	border-style: solid;
+	border-width: 5px;
+	border-color: black;
+	border-radius: 5px;
+	border-top-left-radius: 0px;
+	background-color: black;
+	line-height: 24px;
+	font-family: Arial;
+	font-weight: bold;
+	color: white;
+	text-align: center;
+}
+
+#chat-form {
+	background-color: white;
+	width: 100%;
+	line-height: 16px;
+	text-align: left;
+}
+
+#chat-form input {
+	color: black;
+	width: 98%;
+	padding-right: 1px;
+}
+
+#messages {
+	list-style-type: none;
+	margin: 0; padding: 0;
+	height: 250px;
+	overflow-y: auto;
+	background-color: white;
+	border-style: solid;
+	border-color: black;
+	border-width: 0px;
+	border-bottom-width: 2px;
+	text-align: left;
+	font-weight: normal;
+	font-size: 14px;
+}
+
+#messages li {
+	display: list-item;
+	background: white;
+	border-bottom-style: solid;
+	border-width: 1px;
+	border-color: #A9A9A9;
+	color: black;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+#messages span {
+	color: #2F4F4F;
+	font-weight: bold;
+}
+
+#inital-container {
+	background:  #003366;
+}
+
+#initial-container div {
+	border: 2px solid #3399CC;
+}
+
+#connect-container {
+	background:  #003366;
+	color: white;
+	min-height: 500px;
+	min-width: 500px;
+	height: 100%;
+	line-height: 30px;
+	font-family: sans-serif;
+	font-weight: bold;
+	border-radius: 5px;
+}
+
+#connect-header {
+	text-align: center;
+}
+
+#connect-footer {
+	text-align: center;
+	height: 30px;
+}
+
+#categories {
+	border: 0;
+	height: 32px;
+}
+
+#rooms-container {
+	min-height: 432px;
+	height: calc(100% - 40px);
+	border: 0;
+}
+
+#setup-container {
+	width: 300px;
+	background: #529ecc;
+	margin-left: calc(50% - 150px);
+	position: relative;
+	top: 100px;
+	color: white;
+	border: 7px solid;
+	border-radius: 5px;
+	padding: 50px;
+	padding-bottom: 50px;
+	padding-top: 40px;
+	font-family: Arial;
+	font-weight: bold;
+	text-align: center;
+}
+
+#setup-container ul {
+	text-align: left;
+	font-size: 18px;
+	margin-bottom: 50px;
+	list-style-type: none;
+}
+
+#setup-container li {
+	margin: 10px;
+}
+
+.name {
+	padding-left: 4px;
+	width: calc(80% - 8px);
+	float: left;
+}
+
+.players {
+	width: calc(10% - 4px);
+	float: left;
+}
+
+.type {
+	width: calc(10% - 4px);
+	float: left;
+}
+
+.room {
+	border: 0;
+	height: 32px;
+}
+
+#initial-container .button {
+	width: 100px;
+	float: left;
+	border: 0;
+}
+
+#initial-container .button:hover {
+	cursor: pointer;
+}
+
+.selected {
+	background: #3399CC;
+}
