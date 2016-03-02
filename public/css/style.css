@@ -112,18 +112,10 @@ body {
 }
 
 #pair-container {
+	margin-left: 40px;
 	height: 600px;
 	width: calc(100% - 255px - 170px);
 	min-width: 600px;
-}
-
-#incomplete-container {
-	margin-left: 40px;
-	height: 400px;
-}
-
-#complete-container {
-
 }
 
 .focus {
@@ -180,6 +172,26 @@ body {
 	border: 3px solid #F0FFF0;
 }
 
+#carousel-nav {
+	list-style-type: none;
+	height: 20px;
+	margin-left: 40px;
+	margin-bottom: 2px;
+}
+
+#carousel-nav li {
+	float: left;
+	color: #6F7A85;
+	padding-left: 5px;
+	padding-right: 5px;
+	background-color: white;
+	font-weight: bold;
+	border: 2px solid #6A89A8;
+}
+
+.slide-tick {
+}
+
 #content {
 	width: calc(100% - 255px);
 	height: 670px;
@@ -234,7 +246,7 @@ body {
 }
 
 .player {
-	max-width: 200px;
+	max-width: 240px;
 	height: 90px;
 	font-size: 18px;
 	font-weight: bold;
@@ -253,32 +265,22 @@ body {
 
 .player-hand {
 	float: left;
-	width: 200px;
+	width: 240px;
 	height: 50px;
 	max-height: 100px;
 	position: relative;
 	white-space: nowrap;
 	background: transparent;
-	padding-left: 5px;
+	padding-left: 4px;
 	margin-left: 5px;
 }
 
 .player-hand img{
-	width: 40px;
+	width: 35px;
 	height: auto;
 	border-style: solid;
 	border-width: 1px;
 	border-radius: 3px;
-	position: absolute;
-}
-
-.player-hand:first-child {
-	width: 200px;
-}
-
-.player-hand .cards{
-	width: 40px;
-	height: auto
 }
 
 .num-cards {

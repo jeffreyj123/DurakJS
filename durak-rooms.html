@@ -1,0 +1,61 @@
+<!doctype html>
+<html ng-app="durakApp">
+	<head>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular-animate.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+		<script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>
+		<script src="/public/js/dom-manip.js"></script>
+		<script src="/public/js/durak-app.js"></script>
+		<script src="/public/js/services.js"></script>
+		<script src="/public/js/controllers.js"></script>
+		<script src="/public/js/animations.js"></script>
+		<link rel="stylesheet" type="text/css" href="/public/css/style.css">
+	</head>
+	<body ng-controller="socketController as socketCtrl">
+		<div id="initial-container"  ng-hide="checkStart">
+			<div id="connect-container" ng-init="fetchRooms()">
+				<div id="connect-header">Join or Create a game</div>
+				<div id="categories"><div class="name">Name</div><div class="players">Players</div><div class="type">Type</div></div>
+				<div id="rooms-container" ng-controller="roomController as roomCtrl" style="display:none">
+					<div class="room" ng-repeat="room in rooms" onClick="$('.selected').removeClass('selected');$(this).toggleClass('selected')"><div class="name">{{room.name}}</div><div class="players"> {{ room.users.length}} / {{room.players}} </div><div class="type"> {{ room.deck}} </div></div>
+				</div>
+				<div id="connect-footer" style="display:none">
+					<div class="button" style="margin-left: calc(50% - 150px)" onClick="setupGame(true)">Create Game</div>
+					<div class="button" onClick="setupGame(false)">Join Game</div>
+					<div class="button" ng-click="fetchRooms()">Refresh</div>
+				</div>
+			</div>
+			<div id="setup-container" style="display: none">
+				<form action="" id="setup-form">
+					<h1 style="color: white; padding-bottom: 20px;">SETUP</h1>
+					<ul>
+						<li id="name-field"><span style="margin-right: 35px">NAME:</span><input id="username" autocomplete="off"/></li>
+						<li id="room-field"><span style="margin-right: 32px">ROOM:</span><input id="room-name" autocomplete="off" /></li>
+		      			<li class="create"><span style="margin-right: 4px">PLAYERS:</span><select id="num-players">
+		      					<option value="2">2</option>
+			                    <option value="3">3</option>
+			                    <option value="4">4</option>
+			                    <option value="5">5</option>
+			                    <option value="6">6</option>
+		                </select></li>
+		      			<li class="create"><span style="margin-right: 28px">RULES:</span><select id="rules-options">
+		      					<option value="House Rules">House Rules </option><a href="hRules.txt">-- help</a>
+		<!-- 	                    <option value="Russian Rules">Russian Rules </option><a href="rRules.txt">-- help</a> -->
+		                 </select></li>
+		      			<li class="create"><span style="margin-right: 38px">DECK:      </span><select id="deck-options">
+			                    <option value="Full">Full (52 cards)</option>
+			                    <option value="Quick">Quick (36 cards)</option>
+		                 </select></li>
+		      		</ul>
+		      		<div class="button" style="border: 3px solid white; width: 100px; padding: 10px; margin-left: calc(50% - 60px)" ng-click="setupSubmit()">SUBMIT</div>
+				</form>
+			</div>
+		</div>
+		<script>
+			$('#rooms-container').show();
+			$('#connect-footer').show();
+		</script>
+		<div id="main-container" ng-show="checkStart" ng-include src="'/public/partials/durak-game.html'"></div>
+	</body>
+</html>

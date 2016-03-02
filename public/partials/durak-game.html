@@ -1,0 +1,61 @@
+<div id="game-container" ng-controller="gameController as gameCtrl">
+	<div id="sidebar">
+		<div id="chat-container" ng-controller="chatController">
+    		Chat
+    		<ul id="messages"></ul>
+    		<form id="chat-form" ng-submit="sendMessage()">
+      			<input id="message" name="message" ng-model="text" autocomplete="off"/>
+			</form>
+		</div>
+		<div id="players-container">
+			<div class="player" ng-repeat="player in game.players" ng-class="isAttDef(player.name)"><span class="player-name">{{player.name}}</span> <span class="num-cards">{{player.cards.length}}</span><div class="player-hand"><img class="cards player-card" id="{{$index}}" src="http://orig13.deviantart.net/149d/f/2014/330/1/1/yoshi_playing_card__by_galaxianartist-d87ps7n.jpg" ng-repeat="card in player.cards | limitTo: 6 track by $index"/></div></div>
+		</div>
+	</div>
+	<div id="content">
+		<div id="deck-container">
+			<img class="cards" src="http://orig13.deviantart.net/149d/f/2014/330/1/1/yoshi_playing_card__by_galaxianartist-d87ps7n.jpg" />
+			<div class="tag" style="margin-left: -110px; margin-top:200px; width: 70px"><span></span>{{game.deck}} cards</div>
+		</div>
+		<div id="trump-container">
+			<div class="cards {{game.trump.suit | lowercase}}" ng-show="game.trump"><span>{{game.trump.rank}} {{game.trump.unicode}}</span><ul><li>{{game.trump.rank}}</li><li>{{game.trump.unicode}}</li></ul></div>
+		</div>
+		<div id="pair-container">
+			<div ng-repeat="pair in pairs" class="pair" ng-click="setPair(pair)">
+				<div class="cards button {{pair.attack.suit | lowercase}} pair-attack"><span>{{pair.attack.rank}} {{pair.attack.unicode}}</span><ul><li>{{pair.attack.rank}}</li><li>{{pair.attack.unicode}}</li></ul></div>
+				<div ng-show="pair.defend" class="cards button {{pair.defend.suit | lowercase}} pair-defend"><span>{{pair.defend.rank}} {{pair.defend.unicode}}</span><ul><li>{{pair.defend.rank}}</li><li>{{pair.defend.unicode}}</li></ul></div>
+			</div>
+		</div>
+		<div id="temp-container">
+			<div id="temp-cards">
+				<div class="cards {{card.suit | lowercase}} temp-card" ng-repeat="card in getTemps()"><span>{{card.rank}} {{card.unicode}}</span><ul><li>{{card.rank}}</li><li>{{card.unicode}}</li></ul></div>
+			</div>
+			<div id="dialogMess"></div>
+		</div>
+		<div id="actions-container">
+			<ul id="actions">
+				<li class="tag button" ng-show="checkInitAction()" ng-click="confirmAction()">Confirm</li>
+				<li class="tag button" ng-show="checkInitAction()" ng-click="cancelAction()">Cancel</li>
+				<li class="tag" id="timer" style="display: none">15</li>
+				<li class="tag">{{game.playerHand.cards.length}} cards</li>
+				<li class="tag button defend-option" ng-click="initDefend()">DEFEND</li>
+				<li class="tag button defend-option" ng-click="initPass()">PASS</li>
+				<li class="tag button defend-option" ng-click="initWin()">WIN</li>
+				<li class="tag button defend-option" ng-click="initSurrender()">GIVE UP</li>
+				<li class="tag button attack-option" ng-click="initAttack()">ATTACK</li>
+				<li class="tag button" ng-click="initSwap()" id="swap">SWAP</li>
+			</ul>
+		</div>
+		<div id="player-container">
+			<div id="cards-carousel" ng-show="game.playerHand.cards.length">
+				<ul id="carousel-nav">
+					<li class="slide-tick button" ng-repeat="tick in gameCtrl.getTicks() track by $index" ng-click="gameCtrl.focusTick($index)">{{getTick($index)}}</li>
+					<li id="left-shift" class="button" ng-click="leftShift()">˂</li>
+					<li id="right-shift" class="button" ng-click="rightShift()">˃</li>
+				</ul>
+				<div style="margin-left: 35px">
+					<div class="cards button {{card.suit | lowercase}} hand-card" id="{{card.name}}" ng-repeat="card in game.playerHand.cards" ng-show="gameCtrl.showCard($index)" ng-click="addTemp(card)" ng-class="findDefend(card)"><span>{{card.rank}} {{card.unicode}}</span><ul><li>{{card.rank}}</li><li>{{card.unicode}}</li></ul></div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
